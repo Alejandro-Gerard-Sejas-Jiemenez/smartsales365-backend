@@ -17,6 +17,7 @@ Including another URLconf
 from django.urls import path, include
 from django.contrib import admin
 from django.shortcuts import redirect
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 def redirect_to_admin(request):
     return redirect('/admin/')
 
@@ -29,4 +30,11 @@ urlpatterns = [
         path('', include('apps.catalogo.urls')),
         path('', include('apps.venta_transacciones.urls')),
     ])),
+]
+
+# OpenAPI / Swagger / Redoc endpoints
+urlpatterns += [
+        path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+        path('api/schema/interface/', SpectacularSwaggerView.as_view(url_name='schema'), name='interface'),
+        path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]

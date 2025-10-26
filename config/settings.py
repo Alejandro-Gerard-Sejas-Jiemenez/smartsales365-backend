@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'drf_spectacular',
 
     # App
     'apps.acceso_seguridad',
@@ -65,10 +66,13 @@ AUTH_USER_MODEL = 'acceso_seguridad.Usuario'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # Allow session auth for the browsable API / admin-authenticated users (useful in dev)
+        'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',  
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # CORS (simple dev)
@@ -202,6 +206,13 @@ cloudinary.config(
     api_key=config('CLOUDINARY_API_KEY'),
     api_secret=config('CLOUDINARY_API_SECRET'),
 )
+
+# Settings for drf-spectacular (OpenAPI)
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'SmartSales365 API',
+    'DESCRIPTION': 'Documentación OpenAPI generada por drf-spectacular',
+    'VERSION': '1.0.0',
+}
 
 # CONFIGURACIÓN FACE++ API
 #FACEPP_API_KEY = config('FACEPP_API_KEY')

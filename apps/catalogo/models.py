@@ -5,10 +5,10 @@ from django.utils import timezone
 
 class Cliente(models.Model):
 
-    ciudad = models.CharField(max_length=120, unique=True)
+    ciudad = models.CharField(max_length=120)
     codigo_postal = models.CharField(max_length=20)
-    preferencia_compra = models.CharField(max_length=100, blank=True)
-    total_compras = models.PositiveIntegerField(default=0)
+    preferencia_compra = models.CharField(max_length=100, blank=True)#creo que lo voy a eliminar ese atributo 
+    total_compras = models.PositiveIntegerField(default=0)#aqui se almacenara las compras totales realizadas por el cliente
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
     
     class Meta:
@@ -22,8 +22,6 @@ class Cliente(models.Model):
 class Categoria(models.Model):
     nombre = models.CharField(max_length=150)
     estado = models.BooleanField(default=True)
-    fecha_creacion = models.DateTimeField(default=timezone.now)
-    fecha_modificacion = models.DateTimeField(auto_now=True)
     
     class Meta:
         ordering = ['id']
@@ -40,12 +38,11 @@ class Producto(models.Model):
     descripcion = models.TextField(blank=True)
     precio_venta = models.DecimalField(max_digits=10, decimal_places=2)
     precio_compra = models.DecimalField(max_digits=10, decimal_places=2)
-    fecha_vencimiento = models.DateField(null=True, blank=True)
-    unidad_medida = models.CharField(max_length=50)
+    unidad_medida = models.CharField(max_length=50)#creo que lo eliminar ese atributo 
     imagen_url = models.URLField(max_length=200, blank=True)
     estado = models.BooleanField(default=True)
-    fecha_creacion = models.DateTimeField(default=timezone.now)
     stock_actual = models.PositiveIntegerField(default=0)
+    ano_garantia = models.PositiveIntegerField(default=0)
     categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE, related_name='productos')
     
     class Meta:
@@ -60,8 +57,6 @@ class Producto(models.Model):
 class Inventario(models.Model):
     nombre = models.CharField(max_length=100)
     productos = models.ManyToManyField(Producto, through='InventarioProducto', related_name='inventarios', help_text='INV-PROD-234')
-    fecha_creacion = models.DateTimeField(default=timezone.now)
-
     class Meta:
         ordering = ['id']
         verbose_name = 'Inventario'

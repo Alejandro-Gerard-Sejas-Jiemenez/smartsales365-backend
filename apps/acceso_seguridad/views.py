@@ -22,6 +22,8 @@ from .serializers import (
     PerfilSerializer,
     CambiarPasswordSerializer,
     BitacoraSerializer,
+    LoginSerializer,
+    LogoutSerializer,
     SolicitarRecuperacionSerializer,
     ConfirmarRecuperacionSerializer,
     RecuperarPasswordSerializer,
@@ -32,6 +34,7 @@ from .serializers import (
 # LOGIN usando correo + password => devuelve access / refresh y usuario
 class LoginJWTView(APIView):
     permission_classes = [permissions.AllowAny]
+    serializer_class = LoginSerializer
 
     def post(self, request):
         correo = request.data.get("correo")
@@ -118,6 +121,7 @@ class LoginJWTView(APIView):
 # PERFIL (requiere Bearer token)
 class PerfilView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = PerfilSerializer
 
     def get(self, request):
         ser = PerfilSerializer(request.user)
@@ -162,6 +166,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
 class LogoutJWTView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = LogoutSerializer
 
     def post(self, request):
         refresh_token = request.data.get("refresh")
@@ -177,6 +182,7 @@ class LogoutJWTView(APIView):
 
 class RegistroView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = RegistroSerializer
 
     def post(self, request):
         ser = RegistroSerializer(data=request.data)
@@ -197,6 +203,7 @@ class RegistroView(APIView):
 # Recuperar contraseña - Simple sin email
 class RecuperarPasswordView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = RecuperarPasswordSerializer
 
     def post(self, request):
         serializer = RecuperarPasswordSerializer(data=request.data)
@@ -238,6 +245,7 @@ class RecuperarPasswordView(APIView):
 # Solicitar recuperación de contraseña - Envía email con token
 class SolicitarRecuperacionView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = SolicitarRecuperacionSerializer
 
     def post(self, request):
         serializer = SolicitarRecuperacionSerializer(data=request.data)
@@ -302,6 +310,7 @@ class SolicitarRecuperacionView(APIView):
 # Confirmar recuperación con token
 class ConfirmarRecuperacionView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = ConfirmarRecuperacionSerializer
 
     def post(self, request):
         serializer = ConfirmarRecuperacionSerializer(data=request.data)

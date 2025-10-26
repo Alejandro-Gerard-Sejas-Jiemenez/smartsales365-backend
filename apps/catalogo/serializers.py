@@ -1,6 +1,39 @@
 from rest_framework import serializers
 from .models import *
+from apps.acceso_seguridad.models import Usuario
 
+
+class ClienteSerializer(serializers.ModelSerializer):
+    usuario = serializers.PrimaryKeyRelatedField(queryset=Usuario.objects.all())
+
+    class Meta:
+        model = Cliente
+        fields = [
+            "id",
+            "ciudad",
+            "codigo_postal",
+            "preferencia_compra",
+            "total_compras",
+            "usuario",
+        ]
+
+    def create(self, validated_data):
+        # usuario ya viene en validated_data por source='usuario'
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        return super().update(instance, validated_data)
+
+
+class CategoriaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Categoria
+        fields = [
+            "id",
+            "nombre",
+            "estado",
+        ]
+        
 class ProductoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
@@ -11,12 +44,11 @@ class ProductoSerializer(serializers.ModelSerializer):
             "descripcion",
             "precio_venta",
             "precio_compra",
-            "fecha_vencimiento",
             "unidad_medida",
             "imagen_url",
             "estado",
-            "fecha_creacion",
             "stock_actual",
+            "ano_garantia",
             "categoria",
         ]
 
@@ -33,7 +65,6 @@ class InventarioProductoSerializer(serializers.ModelSerializer):
             "producto",
             "producto_id",
             "cantidad",
-            "fecha_ingreso",
         ]
 
 
@@ -45,10 +76,9 @@ class InventarioSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "nombre",
-            "fecha_creacion",
             "productos",
         ]
 
-    def get_productos(self, obj):
+    def get_productos(self, obj) -> list:
         inventario_productos = InventarioProducto.objects.filter(inventario=obj)
         return InventarioProductoSerializer(inventario_productos, many=True).data

@@ -40,7 +40,7 @@ class RegistroSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ['id', 'correo', 'password', 'nombre', 'apellido', 'residente', 'personal']
+        fields = ['id', 'correo', 'password', 'nombre', 'apellido']
 
     def create(self, validated_data):
         password = validated_data.pop('password')
@@ -51,19 +51,17 @@ class RegistroSerializer(serializers.ModelSerializer):
         return user
 
 class PerfilSerializer(serializers.ModelSerializer):
-    residente_info = serializers.SerializerMethodField()
-    personal_info = serializers.SerializerMethodField()
-
+    usuario_info = serializers.SerializerMethodField() 
     class Meta:
         model = Usuario
-        fields = ['id', 'correo', 'nombre', 'apellido',  'cliente_info']
+        fields = ['id', 'correo', 'nombre', 'apellido',  'usuario_info']
 
-    def get_cliente_info(self, obj):
-        if obj.cliente:
+    def get_usuario_info(self, obj):
+        if obj.usuario:
             return {
-                'id': obj.cliente.id,
-                'nombre': obj.cliente.nombre,
-                'apellidos': obj.cliente.apellidos
+                'id': obj.usuario.id,
+                'nombre': obj.usuario.nombre,
+                'apellidos': obj.usuario.apellidos
             }
         return None
 
@@ -73,6 +71,15 @@ class RecuperarPasswordSerializer(serializers.Serializer):
 class CambiarPasswordSerializer(serializers.Serializer):
     password_actual = serializers.CharField()
     password_nueva = serializers.CharField(min_length=4)
+
+
+class LoginSerializer(serializers.Serializer):
+    correo = serializers.EmailField()
+    password = serializers.CharField()
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
 
 class BitacoraSerializer(serializers.ModelSerializer):
     usuario_correo = serializers.CharField(source='usuario.correo', read_only=True)
