@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from typing import Optional, Dict, Any
 from .models import Usuario, Bitacora, Aviso 
 
 class UsuarioReadSerializer(serializers.ModelSerializer):
@@ -7,7 +8,7 @@ class UsuarioReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ['id', 'correo', 'nombre', 'apellido', 'telefono', 'is_active', 'last_login', 'cliente_nombre']
+        fields = ['id', 'correo', 'nombre', 'apellido', 'telefono', 'is_active', 'last_login', 'cliente_nombre', 'is_superuser']
 
 class UsuarioWriteSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
@@ -54,14 +55,21 @@ class PerfilSerializer(serializers.ModelSerializer):
     usuario_info = serializers.SerializerMethodField() 
     class Meta:
         model = Usuario
-        fields = ['id', 'correo', 'nombre', 'apellido',  'usuario_info']
+        fields = ['id', 'correo', 'nombre', 'apellido', 'is_superuser', 'usuario_info']
 
-    def get_usuario_info(self, obj):
-        if obj.usuario:
+    def get_usuario_info(self, obj) -> Optional[Dict[str, Any]]:
+        """Return related cliente info for this Usuario or None.
+
+        drf-spectacular needs a return type to infer the schema for
+        SerializerMethodField; adding Optional[Dict[str, Any]] fixes the
+        "unable to resolve type hint" warning.
+        """
+        cliente = getattr(obj, 'cliente', None)
+        if cliente:
             return {
-                'id': obj.usuario.id,
-                'nombre': obj.usuario.nombre,
-                'apellidos': obj.usuario.apellidos
+                'id': getattr(cliente, 'id', None),
+                'nombre': getattr(cliente, 'nombre', ''),
+                'apellidos': getattr(cliente, 'apellidos', ''),
             }
         return None
 
