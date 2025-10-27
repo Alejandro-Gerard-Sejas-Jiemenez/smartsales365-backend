@@ -14,6 +14,7 @@ import random
 import string
 import secrets
 
+
 from .models import Usuario, Bitacora, Aviso
 from .serializers import (
     UsuarioReadSerializer,

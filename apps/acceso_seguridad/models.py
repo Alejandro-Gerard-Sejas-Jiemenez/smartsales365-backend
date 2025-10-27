@@ -27,10 +27,16 @@ class UsuarioManager(BaseUserManager):
 
 
 class Usuario(AbstractBaseUser, PermissionsMixin):
+    rol_Choices = (
+        ('ADMIN', 'Administrador'),
+        ('CLIENTE', 'Cliente'),
+    )
+
     correo = models.EmailField(unique=True)
     nombre = models.CharField(max_length=100, blank=True)
     apellido = models.CharField(max_length=100, blank=True)
     telefono = models.CharField(max_length=15, blank=True, null=True)
+    rol = models.CharField(max_length=20, choices=rol_Choices, default='CLIENTE')
 
     is_active = models.BooleanField(default=True)      
     is_staff = models.BooleanField(default=False)

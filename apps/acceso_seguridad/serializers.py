@@ -8,14 +8,14 @@ class UsuarioReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ['id', 'correo', 'nombre', 'apellido', 'telefono', 'is_active', 'last_login', 'cliente_nombre', 'is_superuser']
+        fields = ['id', 'correo', 'nombre', 'apellido', 'telefono', 'is_active', 'last_login', 'cliente_nombre', 'is_superuser', 'rol']
 
 class UsuarioWriteSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = Usuario
-        fields = ['id', 'correo', 'password', 'nombre', 'apellido', 'telefono', 'is_active']
+        fields = ['id', 'correo', 'password', 'nombre', 'apellido', 'telefono', 'is_active', 'rol']
 
     def to_internal_value(self, data):
         if self.instance and 'password' not in data:
@@ -41,7 +41,7 @@ class RegistroSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ['id', 'correo', 'password', 'nombre', 'apellido']
+        fields = ['id', 'correo', 'password', 'nombre', 'apellido', 'rol']
 
     def create(self, validated_data):
         password = validated_data.pop('password')
