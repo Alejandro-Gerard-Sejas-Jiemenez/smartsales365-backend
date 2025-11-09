@@ -219,23 +219,19 @@ class RecuperarPasswordView(APIView):
                     f'Contraseña recuperada desde {request.META.get("REMOTE_ADDR", "IP desconocida")}',
                     request,
                 )
-                # Aquí podrías enviar email (opcional)
-                # Por ahora solo retorna la password temporal (para proyecto universitario)
                 return Response(
                     {
                         "detail": "Password temporal generada",
-                        "temp_password": temp_password,  # En producción NO hagas esto
+                        "temp_password": temp_password,
                     }
                 )
 
             except Usuario.DoesNotExist:
-                # No revelar si el usuario existe o no
                 return Response(
                     {"detail": "Si el correo existe, se enviará la nueva contraseña"}
                 )
 
         return Response(serializer.errors, status=400)
-
 
 # Solicitar recuperación de contraseña - Envía email con token
 class SolicitarRecuperacionView(APIView):
@@ -258,7 +254,7 @@ class SolicitarRecuperacionView(APIView):
                 try:
                     enviar_email_brevo(
                         to_email=correo,
-                        subject="Recuperación de Contraseña - Smart Condominium",
+                        subject="Recuperación de Contraseña - SmartSales365",
                         html_content=f"""
                         <p>Hola {usuario.nombre},</p>
                         <p>Has solicitado recuperar tu contraseña. Usa el siguiente token para crear una nueva contraseña:</p>
@@ -266,7 +262,7 @@ class SolicitarRecuperacionView(APIView):
                         <p>Este token expira en 1 hora.</p>
                         <p>Si no solicitaste este cambio, ignora este email.</p>
                         <br>
-                        <p>Saludos,<br>Equipo Smart Condominium</p>
+                        <p>Saludos,<br>Equipo SmartSales365</p>
                         """,
                     )
 

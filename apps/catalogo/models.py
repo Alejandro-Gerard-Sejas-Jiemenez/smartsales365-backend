@@ -33,7 +33,7 @@ class Categoria(models.Model):
     
 class Producto(models.Model):
 
-    codigo_producto = models.CharField(max_length=50)
+    codigo_producto = models.CharField(max_length=50, unique=True)
     nombre = models.CharField(max_length=150)
     descripcion = models.TextField(blank=True)
     precio_venta = models.DecimalField(max_digits=10, decimal_places=2)

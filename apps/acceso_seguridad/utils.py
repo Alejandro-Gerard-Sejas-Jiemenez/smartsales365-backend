@@ -9,10 +9,15 @@ def enviar_email_brevo(to_email, subject, html_content):
         "content-type": "application/json"
     }
     data = {
-        "sender": {"name": "Condominium", "email": "321javiercruz@gmail.com"},
+        "sender": {
+            "name": "SmartSales365", 
+            "email": "yordangallardo21@gmail.com"
+        },
         "to": [{"email": to_email}],
         "subject": subject,
         "htmlContent": html_content
     }
     r = requests.post(url, headers=headers, json=data)
+    if r.status_code != 201:
+        print(f"Error al enviar email a {to_email}: {r.status_code} - {r.text}")
     return r.json()
