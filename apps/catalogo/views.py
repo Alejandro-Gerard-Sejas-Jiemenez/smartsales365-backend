@@ -24,16 +24,35 @@ class ClienteViewSet(viewsets.ModelViewSet):
 class CategoriaViewSet(viewsets.ModelViewSet):
     queryset = Categoria.objects.all().order_by('id')
     serializer_class = CategoriaSerializer
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     
+import cloudinary.uploader
+
 class ProductoViewSet(viewsets.ModelViewSet):
     queryset = Producto.objects.all().order_by('id')
     serializer_class = ProductoSerializer
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         try:
+            imagen = request.FILES.get('imagen')
+            imagen_url = None
+            if imagen:
+                result = cloudinary.uploader.upload(imagen)
+                imagen_url = result.get('secure_url')
+                request.data['imagen_url'] = imagen_url
             return super().create(request, *args, **kwargs)
+        except IntegrityError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        try:
+            imagen = request.FILES.get('imagen')
+            if imagen:
+                result = cloudinary.uploader.upload(imagen)
+                imagen_url = result.get('secure_url')
+                request.data['imagen_url'] = imagen_url
+            return super().update(request, *args, **kwargs)
         except IntegrityError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
