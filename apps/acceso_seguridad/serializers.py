@@ -4,11 +4,11 @@ from .models import Usuario, Bitacora, Aviso
 
 class UsuarioReadSerializer(serializers.ModelSerializer):
 
-    cliente_nombre = serializers.CharField(source='cliente.nombre', read_only=True)
+    # cliente_nombre = serializers.CharField(source='cliente.nombre', read_only=True)
 
     class Meta:
         model = Usuario
-        fields = ['id', 'correo', 'nombre', 'apellido', 'telefono', 'is_active', 'last_login', 'cliente_nombre', 'is_superuser', 'rol']
+        fields = ['id', 'correo', 'nombre', 'apellido', 'telefono', 'is_active', 'last_login', 'is_superuser', 'rol']
 
 class UsuarioWriteSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
@@ -21,10 +21,19 @@ class UsuarioWriteSerializer(serializers.ModelSerializer):
         if self.instance and 'password' not in data:
             self.fields['password'].required = False
         return super().to_internal_value(data)
+        if not self.instance and 'password' not in data:
+             self.fields['password'].required = True
+        return super().to_internal_value(data)
 
     def create(self, validated_data):
         password = validated_data.pop('password')
-        user = Usuario.objects.create_user(password=password, **validated_data)
+
+        try:
+            user = Usuario(**validated_data)
+            user.set_password(password)
+            user.save()
+        except Exception as e:
+            raise serializers.ValidationError(str(e))
         return user
 
     def update(self, instance, validated_data):

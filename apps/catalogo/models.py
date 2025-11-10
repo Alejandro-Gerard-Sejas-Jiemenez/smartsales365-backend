@@ -1,15 +1,11 @@
-
 from apps.acceso_seguridad.models import Usuario
 from django.db import models
 from django.utils import timezone
 
 class Cliente(models.Model):
-
-    ciudad = models.CharField(max_length=120)
-    codigo_postal = models.CharField(max_length=20)
-    preferencia_compra = models.CharField(max_length=100, blank=True)#creo que lo voy a eliminar ese atributo 
-    total_compras = models.PositiveIntegerField(default=0)#aqui se almacenara las compras totales realizadas por el cliente
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name='cliente')
+    ciudad = models.CharField(max_length=120, blank=True, null=True)
+    codigo_postal = models.CharField(max_length=20, blank=True, null=True)
     
     class Meta:
         ordering = ['id']
@@ -27,18 +23,17 @@ class Categoria(models.Model):
         ordering = ['id']
         verbose_name = 'Categoría'
         verbose_name_plural = 'Categorías'
+        
     def __str__(self):
         return self.nombre
     
     
 class Producto(models.Model):
-
     codigo_producto = models.CharField(max_length=50, unique=True)
     nombre = models.CharField(max_length=150)
     descripcion = models.TextField(blank=True)
     precio_venta = models.DecimalField(max_digits=10, decimal_places=2)
     precio_compra = models.DecimalField(max_digits=10, decimal_places=2)
-    unidad_medida = models.CharField(max_length=50)#creo que lo eliminar ese atributo 
     imagen_url = models.URLField(max_length=200, blank=True)
     estado = models.BooleanField(default=True)
     stock_actual = models.PositiveIntegerField(default=0)
@@ -57,6 +52,7 @@ class Producto(models.Model):
 class Inventario(models.Model):
     nombre = models.CharField(max_length=100)
     productos = models.ManyToManyField(Producto, through='InventarioProducto', related_name='inventarios', help_text='INV-PROD-234')
+    
     class Meta:
         ordering = ['id']
         verbose_name = 'Inventario'
