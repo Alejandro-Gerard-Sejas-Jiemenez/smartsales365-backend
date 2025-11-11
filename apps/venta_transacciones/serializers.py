@@ -13,11 +13,13 @@ class _UsuarioSimpleSerializer(serializers.ModelSerializer):
 
 # --- Serializador de Detalle (Lectura) ---
 class DetalleVentaSerializer(serializers.ModelSerializer):
+    # --- Tomado de 'Incoming' (anida el producto completo) ---
     producto = ProductoSerializer(read_only=True)
     
     class Meta:
         model = DetalleVenta
         fields = [
+            # --- Tomado de 'Incoming' (incluye fecha_creacion) ---
             'id', 'venta', 'producto', 'cantidad', 
             'precio_unitario', 'subtotal', 
             'fecha_creacion'
@@ -77,6 +79,7 @@ class DetalleCarritoSerializer(serializers.ModelSerializer):
         ]
 
 class CarritoSerializer(serializers.ModelSerializer):
+    # --- Tomado de 'Incoming' (sincronizado con models.py) ---
     detalles = DetalleCarritoSerializer(many=True, read_only=True) 
     
     class Meta:
@@ -87,10 +90,11 @@ class CarritoSerializer(serializers.ModelSerializer):
             'estado', 
             'origen', 
             'detalles'
+            # 'total' se quitó (correcto)
         ]
 
 # --- Serializador de Pago ---
-class PagoSerializer(serializers.ModelSerializer)
+class PagoSerializer(serializers.ModelSerializer):
     venta = VentaReadSerializer(read_only=True)
     venta_id = serializers.PrimaryKeyRelatedField(queryset=Venta.objects.all(), source='venta', write_only=True)
     
