@@ -1,51 +1,47 @@
 
 from rest_framework import serializers
 from .models import *
-from apps.catalogo.serializers import ProductoSerializer 
-from apps.acceso_seguridad.models import Usuario 
 
-
-class _UsuarioSimpleSerializer(serializers.ModelSerializer):
-    """Serializador interno solo para mostrar info del usuario en la venta."""
-    class Meta:
-        model = Usuario
-        fields = ['id', 'nombre', 'apellido', 'correo']
-
-# --- Serializador de Detalle (Lectura) ---
 class DetalleVentaSerializer(serializers.ModelSerializer):
-    # --- Tomado de 'Incoming' (anida el producto completo) ---
-    producto = ProductoSerializer(read_only=True)
+    producto_nombre = serializers.CharField(source='producto.nombre', read_only=True)
+    producto_imagen = serializers.CharField(source='producto.imagen_url', read_only=True)
     
     class Meta:
         model = DetalleVenta
         fields = [
-            # --- Tomado de 'Incoming' (incluye fecha_creacion) ---
-            'id', 'venta', 'producto', 'cantidad', 
-            'precio_unitario', 'subtotal', 
-            'fecha_creacion'
+            'id', 'venta', 'producto', 'producto_nombre', 'producto_imagen', 
+            'cantidad', 'precio_unitario', 'subtotal'
         ]
 
-# --- Serializador de Venta (Lectura) ---
 class VentaReadSerializer(serializers.ModelSerializer):
-    # --- Tomado de 'Incoming' (es la versión correcta) ---
+    """Serializador para LECTURA de ventas con todos los detalles"""
     detalles = DetalleVentaSerializer(many=True, read_only=True)
-    cliente = serializers.SerializerMethodField()
-
+    total_venta = serializers.DecimalField(source='total', max_digits=10, decimal_places=2, read_only=True)
+    metodo_pago = serializers.CharField(source='metodo_entrada', read_only=True)
+    
+    # Campos adicionales que el frontend espera pero que no están en el modelo
+    estado = serializers.SerializerMethodField()
+    descuento = serializers.SerializerMethodField()
+    notas = serializers.SerializerMethodField()
+    
     class Meta:
         model = Venta
         fields = [
-            'id', 
-            'cliente', 
-            'fecha_venta', 
-            'metodo_entrada', 
-            'tipo_venta', 
-            'total', 
-            'detalles'
+            'id', 'cliente', 'fecha_venta', 'total', 'total_venta', 'metodo_entrada', 
+            'metodo_pago', 'tipo_venta', 'estado', 'descuento', 'notas', 'detalles'
         ]
+        read_only_fields = ['fecha_venta']
     
-    def get_cliente(self, obj):
-        if obj.cliente and obj.cliente.usuario:
-            return _UsuarioSimpleSerializer(obj.cliente.usuario).data
+    def get_estado(self, obj):
+        """Devuelve 'Completada' por defecto para ventas existentes"""
+        return 'Completada'
+    
+    def get_descuento(self, obj):
+        """Devuelve 0 como descuento por defecto"""
+        return 0.0
+    
+    def get_notas(self, obj):
+        """Devuelve None o string vacío para notas"""
         return None
 
 # --- Serializador de Venta (Escritura) ---
@@ -66,49 +62,49 @@ class VentaSerializer(serializers.ModelSerializer):
 
 # --- Serializadores de Carrito ---
 class DetalleCarritoSerializer(serializers.ModelSerializer):
-    # --- Tomado de 'Incoming' (anida el producto completo) ---
-    producto = ProductoSerializer(read_only=True)
+    producto_nombre = serializers.CharField(source='producto.nombre', read_only=True)
+    producto_imagen = serializers.CharField(source='producto.imagen_url', read_only=True)
+    producto_info = serializers.SerializerMethodField(read_only=True)
     
     class Meta:
         model = DetalleCarrito
         fields = [
-            # --- Tomado de 'Incoming' (incluye fecha_agregada) ---
-            'id', 'carrito', 'producto', 'cantidad', 
-            'precio_unitario', 'subtotal',
-            'fecha_agregada'
+            'id', 'carrito', 'producto', 'producto_nombre', 'producto_imagen', 
+            'producto_info', 'cantidad', 'precio_unitario', 'subtotal'
         ]
+        read_only_fields = ['carrito', 'precio_unitario', 'subtotal']  # Se calculan automáticamente
+    
+    def get_producto_info(self, obj):
+        """Devuelve información completa del producto"""
+        from apps.catalogo.serializers import ProductoSerializer
+        return ProductoSerializer(obj.producto).data
 
 class CarritoSerializer(serializers.ModelSerializer):
-    # --- Tomado de 'Incoming' (sincronizado con models.py) ---
-    detalles = DetalleCarritoSerializer(many=True, read_only=True) 
+    detalles = DetalleCarritoSerializer(many=True, read_only=True)  # CORREGIDO: sin source, usa el related_name 'detalles'
+    cliente_nombre = serializers.CharField(source='cliente.usuario.nombre', read_only=True)
+    cliente_correo = serializers.CharField(source='cliente.usuario.correo', read_only=True)
     
     class Meta:
         model = Carrito
         fields = [
-            'id', 'cliente', 'fecha_creacion', 
-            'fecha_actualizacion', 
-            'estado', 
-            'origen', 
-            'detalles'
-            # 'total' se quitó (correcto)
+            'id', 'cliente', 'cliente_nombre', 'cliente_correo', 'fecha_creacion', 'estado', 'origen', 'detalles'
         ]
+        read_only_fields = ['cliente', 'fecha_creacion', 'estado', 'origen']  # El cliente se asigna automáticamente
 
-# --- Serializador de Pago ---
 class PagoSerializer(serializers.ModelSerializer):
-    venta = VentaReadSerializer(read_only=True)
+    venta = VentaSerializer(read_only=True)
     venta_id = serializers.PrimaryKeyRelatedField(queryset=Venta.objects.all(), source='venta', write_only=True)
     
     class Meta:
         model = Pago
         fields = [
             'id', 'venta', 'venta_id', 'monto', 'metodo_pago', 'estado',
-            'stripe_payment_intent_id', 
-            'stripe_client_secret',
-            'paypal_order_id', 
-            'fecha_creacion', 'fecha_actualizacion', 'referencia_pago'
+            'stripe_payment_intent_id', 'stripe_client_secret',
+            'fecha_creacion', 'fecha_actualizacion', 'referencia_pago', 'notas'
         ]
-        read_only_fields = [
-            'stripe_payment_intent_id', 
-            'stripe_client_secret',
-            'paypal_order_id'
-        ]
+        read_only_fields = ['stripe_payment_intent_id', 'stripe_client_secret']
+
+class PagoCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Pago
+        fields = ['venta', 'monto', 'metodo_pago']
