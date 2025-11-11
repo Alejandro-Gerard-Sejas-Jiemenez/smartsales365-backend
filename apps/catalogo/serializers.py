@@ -14,10 +14,11 @@ class ClienteReadSerializer(serializers.ModelSerializer):
     ciudad = serializers.CharField(source='cliente.ciudad', read_only=True, default='')
     codigo_postal = serializers.CharField(source='cliente.codigo_postal', read_only=True, default='')
     total_compras_calculado = serializers.SerializerMethodField()
+    cliente_id = serializers.IntegerField(source='cliente.id', read_only=True)
     class Meta:
         model = Usuario 
         fields = [
-            'id', 'correo', 'nombre', 'apellido', 'telefono', 
+            'id', 'cliente_id', 'correo', 'nombre', 'apellido', 'telefono', 
             'is_active', 'last_login', 'rol', 'ciudad', 
             'codigo_postal', 'total_compras_calculado'
         ]
