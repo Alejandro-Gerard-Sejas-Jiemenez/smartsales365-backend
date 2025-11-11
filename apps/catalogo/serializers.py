@@ -2,14 +2,14 @@ from rest_framework import serializers
 from .models import *
 from apps.acceso_seguridad.models import Usuario
 
-# --- Serializador Anidado para el Perfil ---
+# --- (INICIO) SERIALIZADORES DE CLIENTE ---
+
 class ClienteProfileSerializer(serializers.ModelSerializer):
     """ Serializador simple para los campos anidados de Cliente """
     class Meta:
         model = Cliente
         fields = ['ciudad', 'codigo_postal']
 
-# --- Serializador de LECTURA para Clientes ---
 class ClienteReadSerializer(serializers.ModelSerializer):
     ciudad = serializers.CharField(source='cliente.ciudad', read_only=True, default='')
     codigo_postal = serializers.CharField(source='cliente.codigo_postal', read_only=True, default='')
@@ -25,7 +25,6 @@ class ClienteReadSerializer(serializers.ModelSerializer):
     def get_total_compras_calculado(self, obj):
         return 0
 
-# --- Serializador de ESCRITURA para Clientes ---
 class ClienteWriteSerializer(serializers.ModelSerializer):
     """
     Serializador de ESCRITURA (CRUD) para Clientes.
@@ -48,14 +47,13 @@ class ClienteWriteSerializer(serializers.ModelSerializer):
             'password': {'required': False}
         }
 
-    # --- LÓGICA COPIADA DE TU UsuarioWriteSerializer (QUE SÍ FUNCIONA) ---
     def to_internal_value(self, data):
         # Hacemos 'password' opcional en 'update'
         if self.instance and 'password' not in data:
             self.fields['password'].required = False
         # Hacemos 'password' obligatorio en 'create'
         if not self.instance and 'password' not in data:
-             self.fields['password'].required = True
+                self.fields['password'].required = True
         return super().to_internal_value(data)
 
     def create(self, validated_data):
@@ -87,7 +85,7 @@ class ClienteWriteSerializer(serializers.ModelSerializer):
         # 1. Separamos los datos del perfil anidado (si vienen)
         cliente_data = validated_data.pop('cliente', None) # Usamos None como default
         
-        # 2. (¡TU LÓGICA FUNCIONAL!) Actualizamos el Usuario
+        # 2. Actualizamos el Usuario
         password = validated_data.pop('password', None)
         for k, v in validated_data.items():
             setattr(instance, k, v)
@@ -106,35 +104,82 @@ class ClienteWriteSerializer(serializers.ModelSerializer):
         
         return instance
 
-# --- Serializadores para otros modelos de Catálogo (Sin cambios) ---
+
+
 class CategoriaSerializer(serializers.ModelSerializer):
-# ... (el resto del archivo se queda igual)
+    """
+    Serializador para el modelo Categoria (CU-07).
+    Añadido 'fecha_creacion' como solo lectura.
+    """
     class Meta:
         model = Categoria
-        fields = ["id", "nombre", "estado"]
+        fields = [
+            "id", "nombre", "estado", 
+            "fecha_creacion"
+        ]
+        read_only_fields = ["fecha_creacion"]
         
 class ProductoSerializer(serializers.ModelSerializer):
+    """
+    Serializador para el modelo Producto (CU-08).
+    Añadidos campos faltantes del modelo y 'fecha_creacion' como solo lectura.
+    Corregido 'año_garantia' a 'ano_garantia'.
+    """
     categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
+    
     class Meta:
         model = Producto
         fields = [
             "id", "codigo_producto", "nombre", "descripcion", "precio_venta",
             "precio_compra", "imagen_url", "estado", "stock_actual", 
-            "ano_garantia", "categoria", "categoria_nombre"
+            "ano_garantia",
+            "categoria", "categoria_nombre", "marca", "fecha_creacion"
         ]
+        read_only_fields = ["fecha_creacion", "categoria_nombre"]
 
 class InventarioProductoSerializer(serializers.ModelSerializer):
+    """
+    Serializador para el log de 'InventarioProducto' (CU-09).
+    Añadido 'fecha_ingreso' como solo lectura.
+    Mantiene tu lógica de 'producto' (lectura) y 'producto_id' (escritura).
+    """
     producto = ProductoSerializer(read_only=True)
-    producto_id = serializers.PrimaryKeyRelatedField(queryset=Producto.objects.all(), source='producto', write_only=True)
+    producto_id = serializers.PrimaryKeyRelatedField(
+        queryset=Producto.objects.all(), source='producto', write_only=True
+    )
+    
+    inventario_codigo = serializers.CharField(source='inventario.codigo', read_only=True)
+
     class Meta:
         model = InventarioProducto
-        fields = ["id", "inventario", "producto", "producto_id", "cantidad"]
+        fields = [
+            "id", "inventario", "inventario_codigo", "producto", "producto_id", 
+            "cantidad", 
+            "fecha_ingreso"
+        ]
+        read_only_fields = ["fecha_ingreso", "producto", "inventario_codigo"]
 
 class InventarioSerializer(serializers.ModelSerializer):
+    """
+    Serializador para el modelo Inventario (CU-09).
+    Corregido 'nombre' por 'codigo' y añadidos campos 'estado' y 'fecha_creacion'.
+    Tu lógica 'get_productos' se mantiene.
+    """
     productos = serializers.SerializerMethodField()
+    
     class Meta:
         model = Inventario
-        fields = ["id", "nombre", "productos"]
+        fields = [
+            "id", 
+            "codigo",
+            "estado",
+            "fecha_creacion",
+            "productos"
+        ]
+        read_only_fields = ["fecha_creacion"]
+
     def get_productos(self, obj) -> list:
+        # Devuelve el LOG de entradas de inventario para este almacén,
+        # lo cual es correcto según el nuevo modelo 'InventarioProducto'.
         inventario_productos = InventarioProducto.objects.filter(inventario=obj)
         return InventarioProductoSerializer(inventario_productos, many=True).data
