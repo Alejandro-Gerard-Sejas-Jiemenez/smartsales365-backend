@@ -76,7 +76,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
 class CategoriaViewSet(viewsets.ModelViewSet):
     queryset = Categoria.objects.all().order_by('id')
     serializer_class = CategoriaSerializer
-    permission_classes = [IsAdminRole]
+    permission_classes = [IsAdminOrReadOnly]  # ✅ CLIENTES pueden ver, ADMIN pueden editar
     filter_backends = [filters.SearchFilter]
     search_fields = ['nombre']
 

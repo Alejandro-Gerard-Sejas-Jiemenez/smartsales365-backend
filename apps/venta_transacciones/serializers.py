@@ -4,22 +4,44 @@ from .models import *
 
 class DetalleVentaSerializer(serializers.ModelSerializer):
     producto_nombre = serializers.CharField(source='producto.nombre', read_only=True)
+    producto_imagen = serializers.CharField(source='producto.imagen_url', read_only=True)
+    
     class Meta:
         model = DetalleVenta
         fields = [
-            'id', 'venta', 'producto', 'producto_nombre', 'cantidad', 'precio_unitario', 'subtotal'
+            'id', 'venta', 'producto', 'producto_nombre', 'producto_imagen', 
+            'cantidad', 'precio_unitario', 'subtotal'
         ]
 
 class VentaSerializer(serializers.ModelSerializer):
     detalles = DetalleVentaSerializer(many=True, read_only=True)
     total_venta = serializers.DecimalField(source='total', max_digits=10, decimal_places=2, read_only=True)
+    metodo_pago = serializers.CharField(source='metodo_entrada', read_only=True)
+    
+    # Campos adicionales que el frontend espera pero que no están en el modelo
+    estado = serializers.SerializerMethodField()
+    descuento = serializers.SerializerMethodField()
+    notas = serializers.SerializerMethodField()
     
     class Meta:
         model = Venta
         fields = [
-            'id', 'cliente', 'fecha_venta', 'total', 'total_venta', 'metodo_entrada', 'tipo_venta', 'detalles'
+            'id', 'cliente', 'fecha_venta', 'total', 'total_venta', 'metodo_entrada', 
+            'metodo_pago', 'tipo_venta', 'estado', 'descuento', 'notas', 'detalles'
         ]
         read_only_fields = ['fecha_venta']
+    
+    def get_estado(self, obj):
+        """Devuelve 'completada' por defecto para ventas existentes"""
+        return 'completada'
+    
+    def get_descuento(self, obj):
+        """Devuelve 0 como descuento por defecto"""
+        return 0.0
+    
+    def get_notas(self, obj):
+        """Devuelve None o string vacío para notas"""
+        return None
 
 class DetalleCarritoSerializer(serializers.ModelSerializer):
     producto_nombre = serializers.CharField(source='producto.nombre', read_only=True)

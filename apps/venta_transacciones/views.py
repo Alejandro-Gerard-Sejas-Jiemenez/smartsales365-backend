@@ -13,9 +13,38 @@ from django.conf import settings
 
 # ViewSet para Venta
 class VentaViewSet(viewsets.ModelViewSet):
-    queryset = Venta.objects.all().order_by('id')
+    queryset = Venta.objects.all().order_by('-id')
     serializer_class = VentaSerializer
     permission_classes = [IsAuthenticated]
+    
+    @action(detail=False, methods=['get'])
+    def mis_compras(self, request):
+        """Obtiene el historial de compras del cliente autenticado"""
+        user = request.user
+        
+        if not hasattr(user, 'cliente'):
+            return Response(
+                {'detail': 'El usuario no tiene un perfil de cliente asociado.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Obtener ventas del cliente con sus detalles
+        ventas = Venta.objects.filter(
+            cliente=user.cliente
+        ).select_related(
+            'cliente__usuario'
+        ).prefetch_related(
+            'detalles__producto'
+        ).order_by('-fecha_venta')
+        
+        print(f"🔍 Ventas encontradas: {ventas.count()}")
+        for venta in ventas:
+            print(f"📦 Venta {venta.id}: {venta.detalles.count()} detalles")
+        
+        # Serializar las ventas
+        serializer = self.get_serializer(ventas, many=True)
+        print(f"📋 Datos serializados: {serializer.data}")
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 # ViewSet para DetalleVenta
 class DetalleVentaViewSet(viewsets.ModelViewSet):
@@ -118,6 +147,9 @@ class CarritoViewSet(viewsets.ModelViewSet):
                 precio_unitario=detalle_carrito.precio_unitario,
                 subtotal=detalle_carrito.subtotal
             )
+        
+        # Recargar la venta con sus detalles y productos relacionados
+        venta = Venta.objects.prefetch_related('detalles__producto').get(id=venta.id)
         
         # Serializar la venta
         serializer = VentaSerializer(venta)
