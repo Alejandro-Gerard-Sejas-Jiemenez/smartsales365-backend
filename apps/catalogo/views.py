@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.db import transaction  # <--- IMPORTACIÓN AÑADIDA
 from apps.acceso_seguridad.models import Usuario
-from apps.acceso_seguridad.permissions import IsAdminRole 
+from apps.acceso_seguridad.permissions import IsAdminRole, IsAdminOrReadOnly
 from .models import *
 from .serializers import (
     ClienteReadSerializer, 
@@ -84,7 +84,7 @@ class CategoriaViewSet(viewsets.ModelViewSet):
 class ProductoViewSet(viewsets.ModelViewSet):
     queryset = Producto.objects.select_related('categoria').all().order_by('id') # Optimizado con select_related
     serializer_class = ProductoSerializer
-    permission_classes = [IsAdminRole]
+    permission_classes = [IsAdminOrReadOnly]  # ✅ CLIENTES pueden ver, ADMIN pueden editar
     filter_backends = [filters.SearchFilter]
     search_fields = ['nombre', 'codigo_producto', 'categoria__nombre', 'marca'] # Añadido 'marca'
 

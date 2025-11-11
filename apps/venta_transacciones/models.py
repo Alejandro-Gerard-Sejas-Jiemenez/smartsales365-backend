@@ -2,8 +2,11 @@ from django.db import models
 from apps.catalogo.models import Producto,Cliente
 
 class Venta(models.Model):
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True)
     fecha_venta = models.DateTimeField(auto_now_add=True)
-    total_venta = models.DecimalField(max_digits=10, decimal_places=2)
+    total = models.DecimalField(max_digits=10, decimal_places=2)
+    metodo_entrada = models.CharField(max_length=50, null=True, blank=True)
+    tipo_venta = models.CharField(max_length=50, null=True, blank=True)
 
     class Meta:
         ordering = ['id']
@@ -11,7 +14,12 @@ class Venta(models.Model):
         verbose_name_plural = 'Ventas'
 
     def __str__(self):
-        return f"Venta {self.id} - Total: {self.total_venta}"
+        return f"Venta {self.id} - Total: {self.total}"
+    
+    # Propiedad de compatibilidad para código existente
+    @property
+    def total_venta(self):
+        return self.total
 
 
 class DetalleVenta(models.Model):
@@ -19,7 +27,8 @@ class DetalleVenta(models.Model):
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
     cantidad = models.PositiveIntegerField()
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-    subtotal = models.DecimalField(max_digits=10, decimal_places=2) 
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         ordering = ['id']
@@ -40,7 +49,7 @@ class Carrito(models.Model):
         verbose_name_plural = 'Carritos'
 
     def __str__(self):
-        return self.nombre
+        return f"Carrito {self.id} - Cliente {self.cliente.usuario.correo}"
 
 class DetalleCarrito(models.Model):
     carrito = models.ForeignKey(Carrito, on_delete=models.CASCADE)
