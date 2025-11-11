@@ -1,12 +1,19 @@
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.conf import settings
+from django_filters.rest_framework import DjangoFilterBackend
+from .filters import VentaFilter
+from django.http import HttpResponse
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
 import stripe
 
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError # Usamos la de DRF
+from rest_framework import viewsets, permissions, status, filters
 
 from .models import *
 from .serializers import *
@@ -18,10 +25,78 @@ class VentaViewSet(viewsets.ModelViewSet):
     queryset = Venta.objects.select_related('cliente__usuario').prefetch_related('detalles__producto').all().order_by('-fecha_venta')
     permission_classes = [permissions.IsAuthenticated] 
 
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = VentaFilter
+    search_fields = ['cliente__usuario__nombre', 'cliente__usuario__apellido', 'cliente__usuario__correo']
+    ordering_fields = ['fecha_venta', 'total']
+
     def get_serializer_class(self):
         if self.action == 'list' or self.action == 'retrieve':
             return VentaReadSerializer
         return VentaSerializer
+
+    @action(detail=True, methods=['get'], url_path='comprobante')
+    def generar_comprobante(self, request, pk=None):
+        """
+        Genera una Nota de Venta (Comprobante) en PDF para una venta específica (CU-14).
+        """
+        try:
+            # 1. Obtener los datos de la Venta
+            venta = self.get_object() # Obtiene la venta por su PK (ej. /api/ventas/23/...)
+            cliente = venta.cliente.usuario
+            detalles = venta.detalles.all()
+
+            # 2. Configurar la respuesta HTTP como un PDF
+            response = HttpResponse(content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="nota_venta_{venta.id}.pdf"'
+
+            # 3. Crear el PDF con ReportLab
+            p = canvas.Canvas(response, pagesize=letter)
+            width, height = letter # (8.5 x 11 pulgadas)
+            
+            p.setFont("Helvetica-Bold", 16)
+            p.drawString(1 * inch, height - 1 * inch, "SmartSales365 - NOTA DE VENTA")
+
+            p.setFont("Helvetica", 12)
+            p.drawString(1 * inch, height - 1.5 * inch, f"Venta ID: {venta.id}")
+            p.drawString(1 * inch, height - 1.7 * inch, f"Fecha: {venta.fecha_venta.strftime('%d/%m/%Y %H:%M')}")
+            
+            p.setFont("Helvetica-Bold", 12)
+            p.drawString(1 * inch, height - 2.2 * inch, "Cliente:")
+            p.setFont("Helvetica", 12)
+            p.drawString(1 * inch, height - 2.4 * inch, f"Nombre: {cliente.nombre} {cliente.apellido}")
+            p.drawString(1 * inch, height - 2.6 * inch, f"Correo: {cliente.correo}")
+
+            # --- Encabezados de la tabla de detalles ---
+            p.setFont("Helvetica-Bold", 11)
+            p.drawString(1 * inch, height - 3.2 * inch, "Producto")
+            p.drawString(4 * inch, height - 3.2 * inch, "Cantidad")
+            p.drawString(5 * inch, height - 3.2 * inch, "P. Unitario")
+            p.drawString(6 * inch, height - 3.2 * inch, "Subtotal")
+            p.line(1 * inch, height - 3.3 * inch, width - 1 * inch, height - 3.3 * inch)
+
+            # --- Loop de Detalles ---
+            p.setFont("Helvetica", 10)
+            y = height - 3.6 * inch # Posición Y inicial
+            for item in detalles:
+                p.drawString(1 * inch, y, item.producto.nombre)
+                p.drawString(4.2 * inch, y, str(item.cantidad))
+                p.drawString(5.2 * inch, y, f"{item.precio_unitario:.2f} Bs")
+                p.drawString(6.2 * inch, y, f"{item.subtotal:.2f} Bs")
+                y -= 0.3 * inch # Moverse a la siguiente línea
+
+            # --- Total ---
+            p.line(1 * inch, y + 0.1 * inch, width - 1 * inch, y + 0.1 * inch)
+            p.setFont("Helvetica-Bold", 14)
+            p.drawString(5 * inch, y - 0.3 * inch, f"TOTAL: {venta.total:.2f} Bs")
+
+            # 4. Finalizar y enviar el PDF
+            p.showPage()
+            p.save()
+            return response
+
+        except Exception as e:
+            return Response({'error': f'Error al generar PDF: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
