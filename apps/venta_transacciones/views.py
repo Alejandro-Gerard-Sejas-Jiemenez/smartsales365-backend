@@ -15,20 +15,16 @@ from apps.catalogo.models import Producto
 # --- ViewSet para Venta (CU-10) ---
 class VentaViewSet(viewsets.ModelViewSet):
     # --- FUSIONADO ---
-    # Queryset y permissions de 'Incoming' (nuestra versión)
     queryset = Venta.objects.select_related('cliente__usuario').prefetch_related('detalles__producto').all().order_by('-fecha_venta')
     permission_classes = [permissions.IsAuthenticated] 
 
     def get_serializer_class(self):
-        # --- Tomado de 'Incoming' (nuestra versión) ---
         if self.action == 'list' or self.action == 'retrieve':
             return VentaReadSerializer
         return VentaSerializer
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        # --- Tomado de 'Incoming' (nuestra versión) ---
-        # Esta es la lógica CRÍTICA del CU-10 para descontar stock.
         
         detalles_data = request.data.pop('detalles', [])
         if not detalles_data:
@@ -88,7 +84,7 @@ class VentaViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def mis_compras(self, request):
-        # --- FUSIONADO: Tomado de 'HEAD' (versión del compañero) ---
+        # --- FUSIONADO: Tomado de 'HEAD' (versión del Alejandro) ---
         # Esta es la lógica para que el cliente vea sus compras en la App Móvil.
         user = request.user
         
@@ -113,14 +109,14 @@ class VentaViewSet(viewsets.ModelViewSet):
 
 # --- ViewSet para DetalleVenta (Solo Lectura) ---
 class DetalleVentaViewSet(viewsets.ReadOnlyModelViewSet):
-    # --- Tomado de 'Incoming' (nuestra versión) ---
+    # --- Tomado de 'Incoming' (versión mía) ---
     queryset = DetalleVenta.objects.all().order_by('id')
     serializer_class = DetalleVentaSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 # --- ViewSet para Carrito (CU-11, Lógica Móvil) ---
 class CarritoViewSet(viewsets.ModelViewSet):
-    # --- FUSIONADO: Tomado de 'HEAD' (compañero) pero MODIFICADO ---
+    # --- FUSIONADO: Tomado de 'HEAD' (Alejandro) pero MODIFICADO ---
     serializer_class = CarritoSerializer
     permission_classes = [permissions.IsAuthenticated]
     

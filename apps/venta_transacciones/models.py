@@ -5,7 +5,6 @@ from django.core.validators import MinValueValidator
 from decimal import Decimal
 
 class Venta(models.Model):
-    # --- Versión Fusionada (Tomada de 'Incoming' 933fcff...) ---
     class MetodoEntrada(models.TextChoices):
         WEB = 'Web', 'Web'
         MOVIL = 'Móvil', 'Móvil'
@@ -26,7 +25,6 @@ class Venta(models.Model):
         validators=[MinValueValidator(Decimal('0.00'))],
         default=0.00
     )
-    # --- Fin de la Versión Fusionada ---
 
     class Meta:
         ordering = ['-fecha_venta']
@@ -34,10 +32,8 @@ class Venta(models.Model):
         verbose_name_plural = 'Ventas'
 
     def __str__(self):
-        # --- Versión Fusionada (Tomada de 'Incoming' 933fcff...) ---
         return f"Venta {self.id} - {self.cliente.usuario.correo} - Total: {self.total}"
     
-    # --- Versión Fusionada (Tomada de 'HEAD' para compatibilidad) ---
     @property
     def total_venta(self):
         return self.total
@@ -54,11 +50,8 @@ class DetalleVenta(models.Model):
     cantidad = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
 
-    # --- Versión Fusionada (Tomada de 'Incoming' 933fcff...) ---
-    # (max_digits=12 es mejor, y default=timezone.now es más seguro para migraciones)
     subtotal = models.DecimalField(max_digits=12, decimal_places=2) 
     fecha_creacion = models.DateTimeField(default=timezone.now)
-    # --- Fin de la Versión Fusionada ---
     
     class Meta:
         ordering = ['id']
@@ -69,7 +62,6 @@ class DetalleVenta(models.Model):
         return f"Venta {self.venta.id} - Producto {self.producto.nombre}"
 
 class Carrito(models.Model):
-    # --- Sin Conflicto ---
     class EstadoCarrito(models.TextChoices):
         ACTIVO = 'Activo', 'Activo'
         ABANDONADO = 'Abandonado', 'Abandonado'
@@ -88,12 +80,9 @@ class Carrito(models.Model):
         verbose_name_plural = 'Carritos'
 
     def __str__(self):
-        # --- Versión Fusionada (Tomada de 'Incoming' 933fcff...) ---
-        # (Es más descriptiva)
         return f"Carrito {self.id} de {self.cliente.usuario.correo} ({self.estado})"
 
 class DetalleCarrito(models.Model):
-    # --- Sin Conflicto ---
     """
     Productos dentro de un Carrito.
     """
@@ -116,7 +105,6 @@ class DetalleCarrito(models.Model):
         return f"Carrito {self.carrito.id} - Producto {self.producto.nombre}"
 
 class Pago(models.Model):
-    # --- Sin Conflicto ---
     """
     Gestión de Pagos (Stripe y PayPal).
     """
