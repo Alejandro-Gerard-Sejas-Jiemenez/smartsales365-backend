@@ -1,6 +1,6 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
-from .utils import enviar_email_brevo
+from .utils import enviar_email_brevo,enviar_notificacion
 from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
@@ -13,6 +13,9 @@ from django.utils import timezone
 import random
 import string
 import secrets
+from .models import Device  # lo crearás en models.py
+from rest_framework.decorators import api_view,permission_classes
+
 
 
 from .models import Usuario, Bitacora, Aviso
@@ -360,3 +363,125 @@ def registrar_bitacora(usuario, accion, descripcion="", request=None):
 class AvisoViewSet(viewsets.ModelViewSet):
     queryset = Aviso.objects.all().order_by('-fecha_push')
     serializer_class = AvisoSerializer
+    
+    def perform_create(self, serializer):
+        """
+        Al crear un aviso:
+        - Si modo_envio='inmediato' → Envía notificación AHORA
+        - Si modo_envio='programado' → Guarda con estado 'Programado' (se enviará después)
+        """
+        aviso = serializer.save()
+        modo_envio = self.request.data.get('modo_envio', 'inmediato')
+        
+        print(f"\n📤 ==========================================")
+        print(f"📤 NUEVO AVISO CREADO: {aviso.asunto}")
+        print(f"📤 Modo de envío: {modo_envio}")
+        print(f"📤 ==========================================\n")
+        
+        if modo_envio == 'inmediato':
+            # Enviar inmediatamente
+            print(f"⚡ Enviando notificación INMEDIATA...")
+            try:
+                enviados = enviar_notificacion(
+                    asunto=aviso.asunto,
+                    mensaje=aviso.mensaje,
+                    urgente=(aviso.tipo == 'Urgente')
+                )
+                
+                if enviados > 0:
+                    aviso.estado = 'Enviado'
+                    print(f"✅ Notificación enviada a {enviados} dispositivo(s)")
+                else:
+                    aviso.estado = 'FALLIDO'
+                    print(f"⚠️ No hay dispositivos registrados")
+                    
+            except Exception as e:
+                aviso.estado = 'FALLIDO'
+                print(f"❌ Error al enviar: {str(e)}")
+                
+            aviso.save()
+            
+        else:  # programado
+            # Solo guardar, se enviará después
+            aviso.estado = 'Programado'
+            aviso.save()
+            print(f"📅 Aviso programado para: {aviso.fecha_push} {aviso.hora_push}")
+    
+    @action(detail=True, methods=['post'], url_path='enviar')
+    def enviar_aviso(self, request, pk=None):
+        """
+        Endpoint para enviar notificación push manualmente
+        POST /api/acceso_seguridad/avisos/{id}/enviar/
+        Requiere: Usuario autenticado con rol ADMIN
+        """
+        print(f"\n🔔 ============================================")
+        print(f"🔔 ENDPOINT ENVIAR AVISO LLAMADO - ID: {pk}")
+        print(f"🔔 Usuario: {request.user}")
+        print(f"🔔 Rol: {request.user.rol if hasattr(request.user, 'rol') else 'N/A'}")
+        print(f"🔔 Es superusuario: {request.user.is_superuser}")
+        print(f"🔔 ============================================\n")
+        
+        # Validar que solo ADMIN o superusuario pueda enviar
+        if not (request.user.is_superuser or request.user.rol == 'ADMIN'):
+            print(f"❌ Permiso denegado - Rol: {request.user.rol}, Superuser: {request.user.is_superuser}")
+            return Response(
+                {'error': 'No tienes permisos para enviar notificaciones'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        aviso = self.get_object()
+        print(f"📄 Aviso encontrado: {aviso.asunto}")
+        
+        try:
+            print(f"🚀 Iniciando envío de notificación...")
+            # Enviar notificación a todos los dispositivos
+            enviados = enviar_notificacion(
+                asunto=aviso.asunto,
+                mensaje=aviso.mensaje,
+                urgente=(aviso.asunto.lower().find('urgente') >= 0)
+            )
+            
+            print(f"📊 Dispositivos alcanzados: {enviados}")
+            
+            if enviados > 0:
+                aviso.estado = 'ENVIADO'
+                aviso.save()
+                print(f"✅ Aviso marcado como ENVIADO")
+                return Response({
+                    'mensaje': f'Notificación enviada a {enviados} dispositivos',
+                    'exitosos': enviados,
+                    'estado': 'ENVIADO'
+                })
+            else:
+                print(f"⚠️ No hay dispositivos registrados")
+                return Response(
+                    {'error': 'No hay dispositivos registrados para enviar notificaciones'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except Exception as e:
+            print(f"❌❌❌ EXCEPCIÓN CAPTURADA: {type(e).__name__}")
+            print(f"❌ Mensaje de error: {str(e)}")
+            import traceback
+            print(f"❌ Traceback completo:")
+            traceback.print_exc()
+            
+            aviso.estado = 'FALLIDO'
+            aviso.save()
+            return Response(
+                {'error': f'Error al enviar notificación: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )  
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def registrar_token(request):
+    token = request.data.get('token')
+    plataforma = request.data.get('plataforma', 'android')
+    if not token:
+        return Response({'detail': 'Token requerido'}, status=400)
+    Device.objects.update_or_create(
+        token=token,
+        defaults={'user': request.user, 'plataforma': plataforma, 'activo': True}
+    )
+    return Response({'ok': True})

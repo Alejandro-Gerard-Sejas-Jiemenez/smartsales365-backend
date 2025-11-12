@@ -2,6 +2,8 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import *
 from rest_framework_simplejwt.views import TokenRefreshView
+from .views import registrar_token
+
 
 router = DefaultRouter()
 router.register('usuarios', UsuarioViewSet, basename='usuarios')
@@ -17,4 +19,5 @@ urlpatterns = [
     path('acceso_seguridad/solicitar-recuperacion/', SolicitarRecuperacionView.as_view(), name='solicitar_recuperacion'),
     path('acceso_seguridad/confirmar-recuperacion/', ConfirmarRecuperacionView.as_view(), name='confirmar_recuperacion'),
     path('acceso_seguridad/', include(router.urls)),
+    path('acceso_seguridad/registrar-token/', registrar_token),
 ]

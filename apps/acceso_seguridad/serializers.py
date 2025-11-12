@@ -122,4 +122,47 @@ class ConfirmarRecuperacionSerializer(serializers.Serializer):
 class AvisoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Aviso
-        fields = ['id', 'asunto', 'mensaje', 'fecha_push', 'hora_push', 'urgente', 'estado']
+        fields = [
+            'id', 
+            'asunto',
+            'mensaje', 
+            'tipo',
+            'estado',
+            'prioridad',
+            'fecha_push', 
+            'hora_push',
+            'imagen_url',
+            'link_accion',
+            'urgente'
+        ]
+        extra_kwargs = {
+            'imagen_url': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'link_accion': {'required': False, 'allow_blank': True, 'allow_null': True},
+            'fecha_push': {'required': False, 'allow_null': True},
+            'hora_push': {'required': False, 'allow_null': True},
+            'tipo': {'required': False},
+            'prioridad': {'required': False},
+        }
+    
+    def to_representation(self, instance):
+        """Convertir asunto a titulo para el frontend"""
+        data = super().to_representation(instance)
+        data['titulo'] = data.get('asunto', '')
+        return data
+    
+    def create(self, validated_data):
+        """Manejar el campo titulo del frontend"""
+        # Si no viene asunto pero sí titulo en los datos iniciales
+        if 'asunto' not in validated_data or not validated_data.get('asunto'):
+            if 'titulo' in self.initial_data:
+                validated_data['asunto'] = self.initial_data['titulo']
+        
+        return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        """Manejar el campo titulo del frontend"""
+        # Si viene titulo en los datos iniciales, usarlo como asunto
+        if 'titulo' in self.initial_data and not validated_data.get('asunto'):
+            validated_data['asunto'] = self.initial_data['titulo']
+        
+        return super().update(instance, validated_data)

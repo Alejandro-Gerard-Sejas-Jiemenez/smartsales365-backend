@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_extensions',
 
     # DRF + CORS
     'rest_framework',
@@ -221,3 +222,23 @@ SPECTACULAR_SETTINGS = {
 # En settings.py
 STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY')
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
+
+
+# ============================================================
+# CONFIGURACIÓN FIREBASE ADMIN SDK
+# ============================================================
+
+import firebase_admin
+from firebase_admin import credentials
+
+try:
+    # Ruta segura al archivo JSON dentro de /firebase/
+    cred_path = BASE_DIR / "firebase" / "smartsales365-firebase.json"
+
+    # Solo inicializar si no está ya inicializado
+    if not firebase_admin._apps:
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred)
+        print("✅ Firebase Admin inicializado correctamente.")
+except Exception as e:
+    print("⚠️ Error al inicializar Firebase Admin:", e)

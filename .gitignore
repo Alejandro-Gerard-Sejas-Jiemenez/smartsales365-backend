@@ -26,6 +26,9 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Firebase key
+firebase/*.json
+
 # PyInstaller
 *.manifest
 *.spec

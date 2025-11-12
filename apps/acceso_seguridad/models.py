@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils import timezone
+from django.conf import settings
 
 class UsuarioManager(BaseUserManager):
     def create_user(self, correo, password=None, **extra):
@@ -98,19 +99,35 @@ class Bitacora(models.Model):
     def __str__(self):
         return f"{self.usuario.correo} - {self.accion} - {self.fecha}"
     
-class Aviso(models.Model):#va a notificaciones
+class Aviso(models.Model):  # va a notificaciones
     ESTADO_CHOICES = (
+        ('Activo', 'Activo'),
+        ('Inactivo', 'Inactivo'),
+        ('Programado', 'Programado'),
+        ('Enviado', 'Enviado'),
+        # Estados legacy
         ('PENDIENTE', 'Pendiente'),
         ('ENVIADO', 'Enviado'),
         ('FALLIDO', 'Fallido'),
     )
     
-    asunto = models.CharField(max_length=200)
-    mensaje = models.TextField()
+    # Campos principales
+    asunto = models.CharField(max_length=200, verbose_name='Título')
+    mensaje = models.TextField(verbose_name='Mensaje')
+    
+    # Campos de configuración
+    tipo = models.CharField(max_length=50, default='Informativo', blank=True)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Activo')
+    prioridad = models.IntegerField(default=1)
+    
+    # Campos opcionales
     fecha_push = models.DateField(null=True, blank=True)
     hora_push = models.TimeField(null=True, blank=True)
-    urgente = models.BooleanField(default=False) 
-    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, blank=True)
+    imagen_url = models.URLField(max_length=500, blank=True, null=True, verbose_name='URL de Imagen')
+    link_accion = models.URLField(max_length=500, blank=True, null=True, verbose_name='Link de Acción')
+    
+    # Campos legacy
+    urgente = models.BooleanField(default=False)
 
     def __str__(self):
         return self.asunto
@@ -120,3 +137,16 @@ class Aviso(models.Model):#va a notificaciones
         verbose_name = 'Aviso'
         verbose_name_plural = 'Avisos'
         ordering = ['-fecha_push']
+        
+        
+#esto es para el push
+class Device(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    token = models.CharField(max_length=255, unique=True)
+    plataforma = models.CharField(max_length=50, default='android')
+    activo = models.BooleanField(default=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user} - {self.plataforma}"
+        
