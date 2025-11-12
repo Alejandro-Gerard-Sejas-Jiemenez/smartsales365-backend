@@ -18,6 +18,10 @@ from rest_framework import viewsets, permissions, status, filters
 from .models import *
 from .serializers import *
 from apps.catalogo.models import Producto
+from django.db.models.functions import TruncMonth
+from django.db.models import Count, Sum
+from django.utils import timezone
+from datetime import timedelta
 
 # ViewSet para Venta
 class VentaViewSet(viewsets.ModelViewSet):
@@ -96,6 +100,42 @@ class VentaViewSet(viewsets.ModelViewSet):
 
         except Exception as e:
             return Response({'error': f'Error al generar PDF: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['get'], url_path='analisis-tendencias')
+    def analisis_tendencias(self, request):
+        """
+        Devuelve el historial de ventas (Monto y Cantidad)
+        agrupado por mes durante los últimos 12 meses.
+        """
+        try:
+            # 1. Definir el rango de fechas (últimos 12 meses)
+            hace_un_ano = timezone.now() - timedelta(days=365)
+
+            # 2. Consultar usando el ORM de Django
+            tendencias = Venta.objects.filter(fecha_venta__gte=hace_un_ano) \
+                                    .annotate(mes=TruncMonth('fecha_venta')) \
+                                    .values('mes') \
+                                    .annotate(
+                                        cantidad_ventas=Count('id'), 
+                                        monto_total=Sum('total')
+                                    ) \
+                                    .order_by('mes')
+
+            # 3. Formatear la salida
+            # Convertimos 'mes' (datetime) a un string "YYYY-MM"
+            data_formateada = [
+                {
+                    "mes": item['mes'].strftime('%Y-%m'),
+                    "cantidad_ventas": item['cantidad_ventas'],
+                    "monto_total": item['monto_total']
+                }
+                for item in tendencias
+            ]
+
+            return Response(data_formateada, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': f'Error al generar tendencias: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
